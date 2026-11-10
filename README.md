@@ -44,6 +44,136 @@ mkdir -p "$HOME/mongodb-data-9.0" &&
   --bind_ip 127.0.0.1 \
   --port 27018
 
+
+# MongoDB CRUD with a LangChain MCP Agent
+
+Run this code in a local VS Code Jupyter notebook. You will run a provided natural-language count query, then write four prompts that create, read, update, and delete a fictional student record. Use Compass to verify what the agent actually did.
+
+## 1. Install MongoDB Community Edition and Compass
+
+**macOS.** With Homebrew installed, open Terminal and run:
+
+~~~bash
+brew tap mongodb/brew
+brew install mongodb-community@8.0
+brew services start mongodb-community@8.0
+brew services list
+~~~
+
+Download the Compass DMG for Apple silicon or Intel as appropriate. Open the DMG and drag Compass into Applications.
+
+**Windows.** Download the MongoDB Community Server 8.0 MSI. Choose **Complete**, keep **Install MongoD as a Service** enabled, and select **Install MongoDB Compass**. If Compass was skipped, download and install it separately. In Windows **Services**, verify that the MongoDB service is running.
+
+- [MogoDB](https://www.mongodb.com/try/download/community)
+- [Compass](https://www.mongodb.com/try/download/compass)
+
+**Linux.** Follow the installation guide for your distribution, start the MongoDB service, and download the matching Compass package.
+
+- [Community Server download](https://www.mongodb.com/try/download/community)
+- [macOS guide](https://www.mongodb.com/docs/v8.0/tutorial/install-mongodb-on-os-x/)
+- [Windows guide](https://www.mongodb.com/docs/v8.0/tutorial/install-mongodb-on-windows/)
+- [Linux guide](https://www.mongodb.com/docs/v8.0/administration/install-on-linux/)
+- [Compass download](https://www.mongodb.com/try/download/compass)
+
+## 2. Create the practice collection
+
+1. Open Compass and connect to `mongodb://127.0.0.1:27017`. Use your local instance and fictional data for this lab.
+2. Select **Create Database**. Enter `university` for the database and `students` for the collection. Use these exact lowercase names throughout.
+3. Open **Documents → Add Data → Insert Document** in the collection. Switch to JSON view and insert the following array once. Refresh the collection and check that there are three documents.
+
+~~~json
+[
+  {"_id": "S101", "name": "James Cercone", "dept_name": "Computer Science", "gpa": 3.62, "credit_hours": 94},
+  {"_id": "S102", "name": "Maya Chen", "dept_name": "Electrical Engineering", "gpa": 3.71, "credit_hours": 78},
+  {"_id": "S103", "name": "Jordan Brooks", "dept_name": "Biology", "gpa": 3.45, "credit_hours": 61}
+]
+~~~
+
+## 3. Set up the notebook
+
+Install [Node.js LTS](https://nodejs.org/en/download) and verify `node --version` and `npx --version` in a fresh terminal. From your course uv project, run the command below. In a new folder without a project, run `uv init` first. Select the project’s `.venv` interpreter as your VS Code notebook kernel.
+
+~~~bash
+uv add langchain langchain-groq langchain-mcp-adapters python-dotenv ipykernel
+~~~
+
+Create a `.env` file beside the notebook and replace the Groq key placeholder. Keep the file out of your submission and version control.
+
+~~~dotenv
+MONGODB_URI=mongodb://127.0.0.1:27017
+GROQ_API_KEY=replace_with_your_key
+~~~
+
+## 4. Run the starter count query
+
+Run these as separate notebook cells. LangChain sends tool requests through the MCP client to the MongoDB MCP server launched by `npx`. Compass connects to the same database independently.
+
+~~~python
+import os
+
+from dotenv import load_dotenv
+from langchain.agents import create_agent
+from langchain.chat_models import init_chat_model
+from langchain_mcp_adapters.client import MultiServerMCPClient
+
+load_dotenv()
+
+model = init_chat_model(
+    model="llama-3.3-70b-versatile",
+    model_provider="groq",
+)
+
+client = MultiServerMCPClient({
+    "mongodb": {
+        "transport": "stdio",
+        "command": "npx",
+        "args": ["-y", "mongodb-mcp-server@latest", "--loggers", "stderr"],
+        "env": {"MDB_MCP_CONNECTION_STRING": os.environ["MONGODB_URI"]},
+    }
+})
+
+mongo_tools = await client.get_tools()
+print("Discovered tools:", sorted(tool.name for tool in mongo_tools))
+~~~
+
+~~~python
+tool_names = {"count", "find", "insert-many", "update-many", "delete-many"}
+lab_tools = [tool for tool in mongo_tools if tool.name in tool_names]
+missing = tool_names - {tool.name for tool in lab_tools}
+if missing:
+    raise RuntimeError(f"Missing MongoDB tools: {sorted(missing)}")
+
+agent = create_agent(
+    model=model,
+    tools=lab_tools,
+    system_prompt=(
+        "Use MongoDB tools only on the university database and students collection. "
+        "Perform only the requested operation. For updates and deletes, require "
+        "an exact _id filter targeting one document. Report the actual tool result."
+    ),
+)
+
+async def run_query(query: str) -> None:
+    result = await agent.ainvoke(
+        {"messages": [{"role": "user", "content": query}]}
+    )
+    for message in result["messages"]:
+        for call in getattr(message, "tool_calls", []):
+            print("Tool used:", call["name"])
+    print(result["messages"][-1].content)
+~~~
+
+~~~python
+user_query = (
+    "How many documents are in the students collection "
+    "in the university database? Use the count tool."
+)
+await run_query(user_query)
+~~~
+
+Confirm that the tool trace shows `count` and the agent reports **3**. Compare with Compass.
+
+
 Resource Links:
 - [Complete youtube playlist](https://www.youtube.com/playlist?list=PLfpB0rPkNb_8)
 - [MCP:](https://modelcontextprotocol.io/docs/2026-07-28/getting-started/intro)

@@ -6,10 +6,10 @@ Through your AI agent, integrated with MCP MongoDB tools, by just using natural 
 
 - Connect and Access your MongoDB database
 - Perform CRUD operations on the collections
-      --Create new Records/documents 
-      --Retrieve/Read/Search documents
-      --Update documents 
-      --Delete documents 
+      - Create new Records/documents 
+      - Retrieve/Read/Search documents
+      - Update documents 
+      - Delete documents 
 - Perform operations on database and collection for creations and modifications as well
 
 

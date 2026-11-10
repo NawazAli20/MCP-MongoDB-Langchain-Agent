@@ -119,7 +119,7 @@ from langchain_mcp_adapters.client import MultiServerMCPClient
 load_dotenv()
 
 model = init_chat_model(
-    model="llama-3.3-70b-versatile",
+    model="openai/gpt-oss-120b",
     model_provider="groq",
 )
 

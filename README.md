@@ -6,10 +6,10 @@ Through your AI agent, integrated with MCP MongoDB tools, by just using natural 
 
 - Connect and Access your MongoDB database
 - Perform CRUD operations on the collections
-      -- Create new Records/documents 
-      -- Retrieve/Read/Search documents
-      -- Update documents 
-      -- Delete documents 
+      --Create new Records/documents 
+      --Retrieve/Read/Search documents
+      --Update documents 
+      --Delete documents 
 - Perform operations on database and collection for creations and modifications as well
 
 
@@ -35,6 +35,14 @@ MongoDB CRUD operations syntax: https://www.mongodb.com/docs/manual/crud/?msocki
 MogoDB MCP: 
 
 MCP Documentations: https://www.mongodb.com/docs/mcp-server/get-started/?msockid=050612d8208b6ac13bc3054421d26b1d
+
+Manually Running mongodb community@9.0 (After tar ball extraction in the current working directory)
+
+mkdir -p "$HOME/mongodb-data-9.0" &&
+./mongodb-macos-arm64-9.0.4/bin/mongod \
+  --dbpath "$HOME/mongodb-data-9.0" \
+  --bind_ip 127.0.0.1 \
+  --port 27018
 
 Resource Links:
 - [Complete youtube playlist](https://www.youtube.com/playlist?list=PLfpB0rPkNb_8)
